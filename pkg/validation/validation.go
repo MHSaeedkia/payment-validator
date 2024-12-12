@@ -17,7 +17,7 @@ func (p *Payment) Validate() error {
 	}
 
 	// Validate Amount : 12-digit string (Payment amount)
-	if len(p.Amount) != 12 {
+	if len(p.Amount) > 12 || len(p.Amount) < 4 {
 		return errors.New("Invalid Amount")
 	}
 
