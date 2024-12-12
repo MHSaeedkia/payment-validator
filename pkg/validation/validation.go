@@ -12,7 +12,7 @@ type Payment models.PaymentData
 
 func (p *Payment) Validate() error {
 	// Validate Pan : 16-19 digits (Primary Account Number)
-	if len(p.Pan) < 16 || len(p.Pan) > 19 {
+	if len(p.Pan) != 16 {
 		return errors.New("Invalid Pan")
 	}
 
@@ -52,7 +52,7 @@ func (p *Payment) Validate() error {
 	}
 
 	// Validate Cvv2 : 3-4 digits (Card Verification Value)
-	if len(p.Cvv2) < 3 || len(p.Cvv2) > 4 {
+	if len(p.Cvv2) != 3 {
 		return errors.New("Invalid Cvv2")
 	}
 
@@ -71,7 +71,9 @@ func (p *Payment) Validate() error {
 }
 
 func timeValidator(time string) error {
-	if hour, err := strconv.Atoi(time[0:2]); err != nil || hour < 0 || hour > 24 {
+	if len(time) != 6 {
+		return errors.New("Invalid Time")
+	} else if hour, err := strconv.Atoi(time[0:2]); err != nil || hour < 0 || hour > 24 {
 		return errors.New("Invalid Time - hour")
 	} else if min, err := strconv.Atoi(time[2:4]); err != nil || min > 60 {
 		return errors.New("Invalid Time - miniute")
@@ -82,7 +84,9 @@ func timeValidator(time string) error {
 }
 
 func expValidator(exp string) error {
-	if month, err := strconv.Atoi(exp[0:2]); err != nil || month > 12 {
+	if len(exp) != 6 {
+		return errors.New("Invalid Exp")
+	} else if month, err := strconv.Atoi(exp[0:2]); err != nil || month > 12 {
 		return errors.New("Invalid Exp - Month")
 	} else if year, err := strconv.Atoi(exp[2:4]); err != nil || year > 100 {
 		return errors.New("Invalid Exp - Year")
