@@ -14,3 +14,15 @@ type PaymentData struct {
 	Exp      string `json:"exp"`      // Expiry date in MMYY format (e.g., "1122")
 	Pin      string `json:"pin"`      // 6-digit string (PIN)
 }
+
+type Report struct {
+	Pan      string
+	PrCode   string
+	Amount   string
+	Trace    string
+	Ldate    string
+	Ltime    string
+	Termid   string
+	Acquirer string
+	TempType int
+}

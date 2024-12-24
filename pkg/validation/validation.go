@@ -2,94 +2,197 @@ package validation
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
+	"strings"
 	"time"
-
-	"github.com/MHSaeedkia/blu-bank-validation/models"
+	"unicode"
 )
 
-type Payment models.PaymentData
+type Validator struct {
+	field string
+	value string
+}
 
-func (p *Payment) Validate() error {
-	// Validate Pan : 16-19 digits (Primary Account Number)
-	if len(p.Pan) != 16 {
-		return errors.New("Invalid Pan")
+func Field(field string) *Validator {
+	return &Validator{
+		field: strings.ToLower(field),
+	}
+}
+
+func (v *Validator) Value(value string) error {
+	v.value = value
+	switch v.field {
+	case "pan":
+		return panValidator(value)
+	case "amount":
+		return amountValidator(value)
+	case "merchant":
+		return merchantValidator(value)
+	case "terminal":
+		return terminalValidator(value)
+	case "acquirer":
+		return acquirerValidator(value)
+	case "date":
+		return dateValidator(value)
+	case "trace":
+		return traceValidator(value)
+	case "rrn":
+		return rrnValidator(value)
+	case "cvv2":
+		return cvv2Validator(value)
+	case "pin":
+		return pinValidator(value)
+	case "time":
+		return timeValidator(value)
+	case "exp":
+		return expValidator(value)
+	default:
+		return fmt.Errorf("unknown field: %s", v.field)
+	}
+}
+
+func luhnValidator(pan string) error {
+	sum := 0
+	for i := 0; i < len(pan); i++ {
+		lun, _ := strconv.Atoi(string(pan[i]))
+		if i%2 == 0 {
+			if lun*2 > 9 {
+				sum += ((lun * 2) % 10) + ((lun * 2) / 10)
+			} else {
+				sum += lun * 2
+			}
+		} else {
+			sum += lun
+		}
+	}
+	if sum%10 != 0 {
+		return errors.New("invalid pan")
+	}
+	return nil
+}
+
+func digitValidator(field, name string) error {
+	for _, char := range field {
+		if !unicode.IsDigit(char) {
+			return fmt.Errorf("invalid %s : must be digit all characters", name)
+		}
+	}
+	return nil
+}
+
+func panValidator(pan string) error {
+	if len(pan) != 16 {
+		return errors.New("invalid pan : must be 16 digits")
 	}
 
-	// Validate Amount : 12-digit string (Payment amount)
-	if len(p.Amount) > 12 || len(p.Amount) < 4 {
-		return errors.New("Invalid Amount")
+	err := digitValidator(pan, "pan")
+	if err != nil {
+		return err
 	}
 
-	// Validate Merchant : 15-digit string (Merchant ID)
-	if len(p.Merchant) != 15 {
-		return errors.New("Invalid Merchant")
+	return nil
+}
+
+func amountValidator(amount string) error {
+	d, err := strconv.Atoi(amount)
+	if err != nil {
+		return fmt.Errorf("invalid amount")
 	}
-
-	// Validate Terminal : 8-digit string (Terminal ID)
-	if len(p.Terminal) != 8 {
-		return errors.New("Invalid Terminal")
+	if d < 1000 || d > 100000000000 {
+		return fmt.Errorf("invalid amount bound")
 	}
+	return nil
+}
 
-	// Validate Acquirer : 6-9 digit string (Acquirer ID)
-	if len(p.Acquirer) < 6 || len(p.Acquirer) > 9 {
-		return errors.New("Invalid Acquirer")
+func merchantValidator(merchant string) error {
+	if len(merchant) > 15 {
+		return errors.New("invalid merchant : must be at last 15 digits")
 	}
+	return digitValidator(merchant, "merchant")
+}
 
-	// Validate Data : Date in YYYYMMDD format (e.g., "20241201")
-	if _, err := time.Parse("20060102", p.Date); err != nil {
-		return errors.New("Invalid Date")
+func terminalValidator(terminal string) error {
+	if len(terminal) != 8 {
+		return errors.New("invalid terminal : must be 8 digits")
 	}
+	return digitValidator(terminal, "terminal")
+}
 
-	// Validate Trace : 6-digit string (Trace ID)
-	if len(p.Trace) != 6 {
-		return errors.New("Invalid Trace")
+func acquirerValidator(acquirer string) error {
+	if len(acquirer) < 6 || len(acquirer) > 11 {
+		return errors.New("Invalid acquirer configuration")
 	}
+	return digitValidator(acquirer, "acquirer")
+}
 
-	// Validate Rrn : 12-digit string (Retrieval Reference Number)
-	if len(p.Rrn) != 12 {
-		return errors.New("Invalid Rrn")
+func dateValidator(date string) error {
+	dt, err := time.Parse("20060102", date)
+	if err != nil {
+		return errors.New("invalid date")
 	}
-
-	// Validate Cvv2 : 3-4 digits (Card Verification Value)
-	if len(p.Cvv2) != 3 {
-		return errors.New("Invalid Cvv2")
+	if dt.After(time.Now()) {
+		return errors.New("date cannot be in the future")
 	}
+	return digitValidator(date, "date")
+}
 
-	// Validate Pin : 6-digit string (PIN)
-	if len(p.Pin) != 6 {
-		return errors.New("Invalid Pin")
+func traceValidator(trace string) error {
+	if len(trace) != 6 {
+		return errors.New("invalid trace : must be 6 digits")
 	}
+	return digitValidator(trace, "trace")
+}
 
-	// Validate Time : Time in HHMMSS format (e.g., "121233")
-	err := timeValidator(p.Time)
+func rrnValidator(rrn string) error {
+	if len(rrn) != 12 {
+		return errors.New("invalid rrn : must be 12 digits")
+	}
+	return digitValidator(rrn, "rrn")
+}
 
-	// Validate Exp : Expiry date in MMYY format (e.g., "1122")
-	err = expValidator(p.Exp)
+func cvv2Validator(cvv2 string) error {
+	if len(cvv2) != 3 {
+		return errors.New("invalid cvv2 : must be 3 digits")
+	}
+	return digitValidator(cvv2, "cvv2")
+}
 
-	return err
+func pinValidator(pin string) error {
+	if len(pin) != 6 {
+		return errors.New("invalid pin : must be 6 digits")
+	}
+	return digitValidator(pin, "pin")
 }
 
 func timeValidator(time string) error {
+	err := digitValidator(time, "time")
+	if err != nil {
+		return err
+	}
 	if len(time) != 6 {
-		return errors.New("Invalid Time")
+		return errors.New("invalid time : must be in HHMMSS format")
 	} else if hour, err := strconv.Atoi(time[0:2]); err != nil || hour < 0 || hour > 24 {
-		return errors.New("Invalid Time - hour")
+		return errors.New("invalid time - hour")
 	} else if min, err := strconv.Atoi(time[2:4]); err != nil || min > 60 {
-		return errors.New("Invalid Time - miniute")
+		return errors.New("invalid time - miniute")
 	} else if sec, err := strconv.Atoi(time[4:6]); err != nil || sec > 60 {
-		return errors.New("Invalid Time - secund")
+		return errors.New("invalid time - secund")
 	}
 	return nil
 }
 
 func expValidator(exp string) error {
-	if len(exp) != 6 {
-		return errors.New("Invalid Exp")
+	err := digitValidator(exp, "exp")
+	if err != nil {
+		return err
+	}
+	if len(exp) != 4 {
+		return errors.New("invalid exp : must be in MMYY format")
 	} else if month, err := strconv.Atoi(exp[0:2]); err != nil || month > 12 {
-		return errors.New("Invalid Exp - Month")
+		return errors.New("invalid exp - month")
 	} else if year, err := strconv.Atoi(exp[2:4]); err != nil || year > 100 {
-		return errors.New("Invalid Exp - Year")
+		return errors.New("invalid exp - year")
 	}
 	return nil
 }

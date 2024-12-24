@@ -3,27 +3,36 @@ package main
 import (
 	"fmt"
 
-	"github.com/MHSaeedkia/blu-bank-validation/pkg/validation"
+	"github.com/MHSaeedkia/blu-bank-validation/models"
+	"github.com/MHSaeedkia/blu-bank-validation/pkg/ftp"
+	"github.com/MHSaeedkia/blu-bank-validation/pkg/reporter"
+)
+
+const (
+	FTP_SERVER = "localhost"
+	FILE_NAME  = "/tmp/example.txt"
 )
 
 func main() {
-	data := &validation.Payment{
-		Pan:      "1234567890123456",
-		Amount:   "100000000000",
-		Merchant: "123456789012345",
-		Terminal: "12345678",
-		Acquirer: "123456",
-		Date:     "20241201",
-		Time:     "124233",
-		Trace:    "123456",
-		Rrn:      "123456789012",
-		Cvv2:     "123",
-		Exp:      "1122",
-		Pin:      "123456",
+	report := models.Report{
+		Pan:      "6219861901234567",
+		PrCode:   "000000",
+		Amount:   "000000012345",
+		Trace:    "269431",
+		Ldate:    "1125",
+		Ltime:    "090000",
+		Termid:   "34567890",
+		Acquirer: "00000603799",
+		TempType: 59,
 	}
-	if err := data.Validate(); err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println("valid")
+
+	err := reporter.Reporter(report, FILE_NAME)
+	if err != nil {
+		fmt.Errorf(err.Error())
+	}
+
+	err = ftp.FTPClient(FTP_SERVER, FILE_NAME, "example.txt")
+	if err != nil {
+		fmt.Errorf(err.Error())
 	}
 }
